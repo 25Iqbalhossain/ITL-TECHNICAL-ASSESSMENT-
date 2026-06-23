@@ -1,19 +1,19 @@
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: rgba(24, 24, 27, 0.5);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --card-border-hover: rgba(255, 255, 255, 0.18);
-  --muted: #a1a1aa;
-  --muted-light: rgba(161, 161, 170, 0.1);
-  --primary: #6366f1;
-  --primary-rgb: 99, 102, 241;
-  --primary-hover: #4f46e5;
+  --background: #f9fafb;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-border: #e5e7eb;
+  --card-border-hover: #d1d5db;
+  --muted: #6b7280;
+  --muted-light: #f3f4f6;
+  --primary: #111827;
+  --primary-rgb: 17, 24, 39;
+  --primary-hover: #374151;
   --success: #10b981;
   --success-bg: rgba(16, 185, 129, 0.1);
-  --danger: #f43f5e;
-  --danger-bg: rgba(244, 63, 94, 0.1);
-  --glow-color: rgba(99, 102, 241, 0.15);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --glow-color: transparent;
   --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -48,27 +48,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: #d1d5db;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #9ca3af;
 }
 
 /* Ambient background glow */
 body::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 1400px;
-  height: 400px;
-  background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: -1;
+  display: none;
 }
 
 /* Keyframes for micro-animations */
@@ -80,15 +70,6 @@ body::before {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
   }
 }
 
@@ -110,9 +91,9 @@ body::before {
 .shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 25%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.03) 75%
+    #f3f4f6 25%,
+    #e5e7eb 50%,
+    #f3f4f6 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;

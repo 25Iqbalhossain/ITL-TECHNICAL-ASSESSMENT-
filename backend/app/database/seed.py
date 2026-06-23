@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.model.employee import Employee
+from app.models.employee import Employee
 
 
 def seed_employees(db: Session) -> None:

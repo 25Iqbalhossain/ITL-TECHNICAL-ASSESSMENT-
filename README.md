@@ -1,280 +1,165 @@
-# Employee Management Platform
+# 🏢 Employee Management Platform
 
-A full-stack employee directory and analytics dashboard built with a FastAPI backend, PostgreSQL, and a Next.js frontend.
+> An industrial-grade, decoupled Microservice Architecture for corporate directory management and analytics.
 
-The backend exposes a small, production-style API for employee data. The frontend consumes that API to render a searchable, filterable dashboard with summary metrics, connection status, refresh controls, and responsive table views.
+![Python](https://img.shields.io/badge/Python-3.13%2B-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-Production_Ready-009688?logo=fastapi)
+![Next.js](https://img.shields.io/badge/Next.js-15%2B-black?logo=next.js)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-336791?logo=postgresql)
 
-## Highlights
+---
 
-- FastAPI service with typed request/response models
-- PostgreSQL persistence through SQLAlchemy
-- Automatic table creation and one-time sample data seeding on startup
-- Next.js App Router frontend with TypeScript
-- Search by employee name or department
-- Department filtering with computed dashboard metrics
-- Live backend connectivity indicator and manual refresh action
-- Clean responsive UI optimized for desktop and mobile
+## 📖 Table of Contents
+1. [System Architecture](#-system-architecture)
+2. [Repository Structure](#-repository-structure)
+3. [Prerequisites](#-prerequisites)
+4. [Backend (API) Setup](#-backend-api-setup)
+5. [Frontend (Client) Setup](#-frontend-client-setup)
+6. [Development Workflow](#-development-workflow)
+7. [API Contract Overview](#-api-contract-overview)
+8. [Code Quality & Standards](#-code-quality--standards)
 
-## Tech Stack
+---
 
-### Backend
+## 🏛 System Architecture
 
-- Python 3.13+
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- psycopg2-binary
-- Pydantic Settings
+This platform adopts a strict, enterprise-ready **Microservice Architecture**, isolating the presentation layer from business logic and data persistence. 
 
-### Frontend
+* **Backend**: Powered by FastAPI and PostgreSQL. Implements the repository pattern (`crud`), centralizes configuration using `pydantic-settings`, and relies on SQLAlchemy ORM.
+* **Frontend**: Powered by Next.js (App Router). Implements strict separation of concerns utilizing custom hooks (`hooks/`), shared interfaces (`types/`), and isolated modular UI components.
+* **Benefits**: 
+  - **Independent Scaling**: Backend APIs and Frontend clients scale asynchronously.
+  - **Separation of Concerns**: HTTP routing, database querying, data validation, and UI rendering are strictly separated into distinct modules.
+  - **Resilience**: The frontend handles API outages gracefully with skeleton loaders and actionable error states.
 
-- Next.js 16
-- React 19
-- TypeScript
-- ESLint
+---
 
-## Project Structure
+## 📂 Repository Structure
+
+The monorepo is divided into two primary sub-systems:
 
 ```text
 .
-|-- backend
-|   `-- app
-|       |-- api
-|       |   `-- employees.py
-|       |-- core
-|       |   `-- config.py
-|       |-- database
-|       |   |-- base.py
-|       |   |-- seed.py
-|       |   `-- session.py
-|       |-- model
-|       |   `-- employee.py
-|       |-- schemas
-|       |   `-- employee.py
-|       `-- main.py
-|-- frontend
-|   `-- src
-|       `-- app
-|           |-- globals.css
-|           |-- layout.tsx
-|           `-- page.tsx
-`-- README.md
+├── backend/                  # Python / FastAPI Microservice
+│   ├── app/
+│   │   ├── core/             # Application config (CORS, Env Vars)
+│   │   ├── crud/             # Repository layer (DB Queries)
+│   │   ├── database/         # Session management & seeding scripts
+│   │   ├── models/           # SQLAlchemy ORM definitions
+│   │   ├── routers/          # HTTP Route controllers & aggregators
+│   │   ├── schemas/          # Pydantic data validation contracts
+│   │   └── main.py           # Application entrypoint & lifespan events
+│   ├── tests/                # Automated testing suite
+│   └── requirements.txt
+│
+├── frontend/                 # Node.js / Next.js Web Client
+│   ├── src/
+│   │   ├── app/              # Next.js routing, layouts, and UI components
+│   │   ├── hooks/            # Business logic and state management
+│   │   ├── types/            # Strict TypeScript interfaces
+│   │   └── utils/            # Data transformation & formatters
+│   ├── next.config.ts        # Next.js compiler & dev environment config
+│   └── package.json
+└── README.md
 ```
 
-## Features
+---
 
-### Backend
+## ⚙️ Prerequisites
 
-- Creates the `employees` table automatically on startup
-- Seeds the database with 10 sample employee records if the table is empty
-- Exposes a health check endpoint for operational monitoring
-- Returns employee data in a stable API schema
-- Handles database errors without leaking raw exception details to clients
+Ensure your local development environment meets the following baseline requirements:
+- **Python**: `3.12` or `3.13+`
+- **Node.js**: `v20.0+` (LTS recommended)
+- **Database**: PostgreSQL `14+` running locally or via Docker
 
-### Frontend
+---
 
-- Fetches employee records from the backend API
-- Displays total personnel, average compensation, and unique department count
-- Filters rows by free-text search and department selection
-- Formats currency and dates for display
-- Shows loading, empty, and error states
-- Uses a responsive, glass-style dashboard layout
+## 🔙 Backend (API) Setup
 
-## API Contract
+The backend handles data validation, database migrations (automatic on startup), and API provision.
 
-Base URL: `http://localhost:8000`
+1. **Navigate to the backend directory and create a virtual environment:**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: .\venv\Scripts\Activate.ps1
+   ```
 
-### `GET /health`
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Returns a simple service status response.
+3. **Configure Environment Variables:**
+   Create a `.env` file in the `backend` root. Use the provided `.env.example` if available, ensuring your `POSTGRES_*` credentials are correct.
 
-Example response:
+4. **Launch the API server:**
+   ```bash
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+   *Note: Upon startup, the backend automatically provisions tables and seeds mock data if the database is empty.*
 
-```json
-{
-  "status": "ok",
-  "message": "Employee API is running."
-}
-```
+---
 
-### `GET /employees`
+## 🎨 Frontend (Client) Setup
 
-Returns all employee records ordered by ascending `id`.
+The frontend consumes the REST API to render a secure, dynamic dashboard.
 
-Response model:
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd frontend
+   ```
 
-```json
-[
-  {
-    "id": 1,
-    "name": "Rahim Ahmed",
-    "department": "Human Resources",
-    "salary": "45000.00",
-    "joining_date": "2021-01-15"
-  }
-]
-```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-Behavior:
+3. **Configure Environment Variables:**
+   Create a `.env.local` if your backend is hosted externally. By default, it connects to `http://localhost:8000`.
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
 
-- `404 Not Found` if the table is empty
-- `500 Internal Server Error` if the database query fails
+4. **Launch the Development Server:**
+   ```bash
+   npm run dev
+   ```
+   *The application will be accessible at `http://localhost:3000`.*
 
-## Data Model
+---
 
-### Employee
+## 🔄 Development Workflow
 
-- `id`: integer primary key
-- `name`: employee full name
-- `department`: department name
-- `salary`: numeric value with 2 decimal places
-- `joining_date`: date of joining
+1. **Database**: Ensure PostgreSQL service is active.
+2. **Terminal 1**: Run the FastAPI backend. Observe logs to confirm DB connection and successful schema creation.
+3. **Terminal 2**: Run the Next.js frontend.
+4. **Documentation**: View live interactive API docs at `http://localhost:8000/docs` (Swagger UI).
+5. **Debugging**: Both servers are running with hot-reloading (`--reload` / Turbopack). Changes reflect instantly.
 
-## Configuration
+---
 
-### Backend environment variables
+## 🔌 API Contract Overview
 
-Create `backend/.env` from `backend/.env.example`.
+Base URL: `http://localhost:8000/api/v1` *(or root based on configuration)*
 
-```env
-APP_NAME=Employee Management API
-APP_VERSION=1.0.0
-DEBUG=True
+| Method | Endpoint      | Description | Responses |
+|--------|--------------|-------------|-----------|
+| `GET`  | `/health`    | Service health check for load balancers. | `200 OK` |
+| `GET`  | `/employees` | Retrieve all employee records. | `200 OK`, `404 Not Found`, `500 Server Error` |
 
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=employee_db
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=123456
-```
+*(Detailed schemas available in Swagger UI `/docs`)*
 
-### Frontend environment variables
+---
 
-The frontend reads `NEXT_PUBLIC_API_URL`.
+## 🛡 Code Quality & Standards
 
-If the variable is not set, it defaults to `http://localhost:8000`.
+This project adheres to Senior/Enterprise software engineering standards:
 
-Example:
+* **Strict Typing**: Python utilizes explicit type hinting (`-> list[Employee]`) paired with Pydantic. TypeScript is heavily enforced on the frontend interfaces.
+* **Repository Pattern**: Backend HTTP routes do not execute database queries. Data access logic is strictly bound to `crud/` repositories.
+* **Custom Hooks**: Frontend React components remain entirely stateless regarding API data. The `useEmployees` hook independently manages fetching, state transitions, and business logic.
+* **Error Boundaries**: The UI implements isolated error states, preventing complete application crashes due to network or backend failures.
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-## Local Setup
-
-### Prerequisites
-
-- Python 3.13 or compatible 3.12+
-- Node.js 20+ recommended
-- PostgreSQL 14+ or compatible
-
-### 1. Backend setup
-
-From the repository root:
-
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-cd backend
-pip install -r requirements.txt
-```
-
-Update `backend/.env` with your local PostgreSQL credentials, then start the API:
-
-```powershell
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The backend will:
-
-- create tables on startup
-- seed sample employees if the table is empty
-- expose OpenAPI docs at `http://localhost:8000/docs`
-
-### 2. Frontend setup
-
-In a new terminal:
-
-```powershell
-cd frontend
-npm install
-```
-
-Run the development server:
-
-```powershell
-npm run dev
-```
-
-Open:
-
-```text
-http://localhost:3000
-```
-
-If your backend is not running on the default address, create `frontend/.env.local` and set `NEXT_PUBLIC_API_URL`.
-
-## Development Workflow
-
-- Start PostgreSQL
-- Start the backend on port `8000`
-- Start the frontend on port `3000`
-- Verify the dashboard loads employee data
-- Use the browser network tab or backend `/docs` page to debug API issues
-
-## Useful Commands
-
-### Backend
-
-```powershell
-cd backend
-..\venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload
-```
-
-### Frontend
-
-```powershell
-cd frontend
-npm run dev
-npm run build
-npm run lint
-```
-
-## Operational Notes
-
-- CORS is configured for `http://localhost:3000`
-- The backend uses a cached settings loader via `pydantic-settings`
-- Database sessions are opened per request and closed automatically
-- The frontend treats API failures as a first-class state and surfaces an actionable error message
-
-## Troubleshooting
-
-### Backend does not start
-
-- Confirm PostgreSQL is running
-- Confirm the credentials in `backend/.env` are correct
-- Confirm the target database exists or is reachable
-
-### Frontend shows API disconnected
-
-- Confirm the backend is running on `http://localhost:8000`
-- Confirm `NEXT_PUBLIC_API_URL` is set correctly if you changed the backend URL
-- Check that CORS still allows the frontend origin
-
-### No employee records appear
-
-- The backend only seeds data when the table is empty
-- If the database already contains rows, startup will not insert duplicates
-
-## Future Improvements
-
-- Add create, update, and delete endpoints
-- Add pagination and server-side search
-- Add authentication and role-based access control
-- Add Alembic migrations for schema management
-- Add automated backend and frontend test coverage
-
-## License
-
-No license file is currently included. Add one before publishing or sharing externally.
+---
+*Built with modern tooling for high performance, maintainability, and scalability.*

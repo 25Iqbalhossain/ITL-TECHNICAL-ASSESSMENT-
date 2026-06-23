@@ -7,9 +7,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # The model must be imported to register the schema with Base.metadata.
 # Without this, Base.metadata.create_all() will not detect the employees table.
-import app.model
+import app.models
 
-from app.api.employees import router as employee_router
+from app.routers.api import api_router
 from app.core.config import settings
 from app.database.base import Base
 from app.database.seed import seed_employees
@@ -80,14 +80,13 @@ app = FastAPI(
 # Configure CORS middleware to enable requests from the Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Register employee routes with the application.
-app.include_router(employee_router)
+app.include_router(api_router)
 
 
 @app.get(

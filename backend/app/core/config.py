@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Employee Management API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # PostgreSQL connection information
     POSTGRES_HOST: str
