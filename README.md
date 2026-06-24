@@ -142,44 +142,6 @@ This platform follows a **service-oriented, decoupled architecture** — separat
 
 ---
 
-### System Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          CLIENT BROWSER                             │
-│                  http://localhost:3000  (Next.js)                   │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │  HTTP / REST (JSON)
-                             │  CORS-controlled
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      API SERVICE  (FastAPI)                         │
-│                  http://localhost:8000                               │
-│                                                                      │
-│   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌───────────────┐  │
-│   │  Routers │ → │ Schemas  │ → │   CRUD   │ → │ SQLAlchemy ORM│  │
-│   │ /api/v1  │   │ Pydantic │   │ Repository│   │    Models     │  │
-│   └──────────┘   └──────────┘   └──────────┘   └───────┬───────┘  │
-│                                                          │           │
-│   ┌──────────┐   ┌───────────────┐                      │           │
-│   │  /health │   │  Lifespan     │ ← startup/shutdown   │           │
-│   │ endpoint │   │  (Bootstrap)  │                      │           │
-│   └──────────┘   └───────────────┘                      │           │
-└─────────────────────────────────────────────────────────┼───────────┘
-                                                           │ SQLAlchemy
-                                                           │ Connection Pool
-                                                           ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     PERSISTENCE LAYER                               │
-│                  PostgreSQL 14+  (employee_db)                      │
-│                                                                      │
-│              ┌──────────────────────────────┐                       │
-│              │        employees table        │                       │
-│              │  id | name | role | dept ...  │                       │
-│              └──────────────────────────────┘                       │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
 ---
 
 ### Services Breakdown
