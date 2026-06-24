@@ -136,9 +136,226 @@ Create an empty PostgreSQL database (e.g., named `employee_db`) on your Postgres
 
 ---
 
-## Architecture and Design Decisions
+## Architecture
 
-* **Automated Setup Lifespan:** We use FastAPI’s `asynccontextmanager` (`lifespan` event) to bootstrap the Postgres database schemas and run the seeder logic immediately on startup, removing manual database migration steps for local development.
-* **Separated Data Access:** The backend uses the Repository pattern inside `crud/` to keep endpoints clean of direct database query concerns, simplifying testing and future schema updates.
-* **Custom React Hook State:** The frontend isolates state management and side effects into a custom React hook `useEmployees`. UI components are stateless regarding the API integration, keeping components clean and focused purely on rendering the user experience.
-* **Graceful Degradation:** The UI handles backend outages gracefully. It detects database connections/server health, transitions to a dedicated error page with immediate "Retry" actions, and displays elegant loading skeleton layouts while data is fetched.
+This platform follows a **service-oriented, decoupled architecture** — separating the client presentation layer from the backend API service and the persistence layer. Each service has a single, well-defined responsibility, communicates over standard HTTP/REST contracts, and can be developed, deployed, and scaled independently.
+
+---
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CLIENT BROWSER                             │
+│                  http://localhost:3000  (Next.js)                   │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │  HTTP / REST (JSON)
+                             │  CORS-controlled
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      API SERVICE  (FastAPI)                         │
+│                  http://localhost:8000                               │
+│                                                                      │
+│   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌───────────────┐  │
+│   │  Routers │ → │ Schemas  │ → │   CRUD   │ → │ SQLAlchemy ORM│  │
+│   │ /api/v1  │   │ Pydantic │   │ Repository│   │    Models     │  │
+│   └──────────┘   └──────────┘   └──────────┘   └───────┬───────┘  │
+│                                                          │           │
+│   ┌──────────┐   ┌───────────────┐                      │           │
+│   │  /health │   │  Lifespan     │ ← startup/shutdown   │           │
+│   │ endpoint │   │  (Bootstrap)  │                      │           │
+│   └──────────┘   └───────────────┘                      │           │
+└─────────────────────────────────────────────────────────┼───────────┘
+                                                           │ SQLAlchemy
+                                                           │ Connection Pool
+                                                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     PERSISTENCE LAYER                               │
+│                  PostgreSQL 14+  (employee_db)                      │
+│                                                                      │
+│              ┌──────────────────────────────┐                       │
+│              │        employees table        │                       │
+│              │  id | name | role | dept ...  │                       │
+│              └──────────────────────────────┘                       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Services Breakdown
+
+#### 1. 🖥️ Frontend Service — Next.js (Port 3000)
+
+The presentation layer is a **Next.js 14 App Router** application written in TypeScript. It is entirely decoupled from the backend — it communicates exclusively through the REST API contract and holds zero business logic.
+
+| Layer | Technology | Responsibility |
+|---|---|---|
+| **Pages / Layouts** | Next.js App Router | File-system routing, server/client component boundaries |
+| **UI Components** | React + CSS Modules | Stateless rendering, accessibility, responsive layouts |
+| **State & Data Layer** | Custom React Hooks | API fetching, filtering, pagination, loading/error state |
+| **Type Safety** | TypeScript | Shared type declarations for all API response shapes |
+| **Utilities** | Pure functions (`utils/`) | Date formatting, name normalization, display helpers |
+
+**Key Design Decisions:**
+- **`useEmployees` hook** — Centralizes all API integration and local state into one composable hook. Components become pure view layers with no awareness of network or data concerns.
+- **Graceful Degradation** — The UI detects server/database outages via the `/health` endpoint and transitions to a dedicated error page with retry capability. Skeleton loaders are displayed during all async operations.
+- **CSS Modules** — Scoped, collision-free styles per component; zero runtime CSS-in-JS overhead.
+
+---
+
+#### 2. ⚙️ Backend API Service — FastAPI (Port 8000)
+
+The API service is a **Python FastAPI** application structured in clean, separated layers following the **Repository Pattern** and **Dependency Injection** principles.
+
+```
+app/
+├── main.py          ← FastAPI app instance, CORS middleware, lifespan bootstrap
+├── core/
+│   └── config.py    ← Pydantic Settings — environment variables & app config
+├── routers/
+│   └── api.py       ← Route registration, versioned API prefix (/api/v1)
+├── schemas/
+│   └── *.py         ← Pydantic v2 request/response models (validation & serialization)
+├── crud/
+│   └── *.py         ← Repository layer — all DB query logic (no SQL in routes)
+├── models/
+│   └── *.py         ← SQLAlchemy ORM table definitions
+└── database/
+    ├── base.py      ← SQLAlchemy declarative Base
+    ├── session.py   ← Engine & SessionLocal factory (connection pool)
+    └── seed.py      ← Idempotent data seeder (runs once on startup if DB is empty)
+```
+
+**Layered Request Lifecycle:**
+
+```
+HTTP Request
+    │
+    ▼
+[Router]  →  validates path/query params
+    │
+    ▼
+[Schema]  →  Pydantic parses & validates request body; coerces types
+    │
+    ▼
+[CRUD / Repository]  →  executes parameterized SQL via SQLAlchemy ORM
+    │
+    ▼
+[Database Session]  →  connection pool manages transaction lifecycle
+    │
+    ▼
+[Schema]  →  Pydantic serializes ORM model → JSON response
+    │
+    ▼
+HTTP Response (JSON)
+```
+
+**Key Design Decisions:**
+- **Repository Pattern (`crud/`)** — All database query logic lives in one place, completely isolated from route handlers. Routes are thin orchestrators; they delegate to CRUD and return the result.
+- **Pydantic v2 Settings (`core/config.py`)** — Environment variables are typed, validated, and documented at startup. No raw `os.getenv()` scattered across the codebase.
+- **Lifespan Bootstrap (`asynccontextmanager`)** — Database schema creation (`Base.metadata.create_all`) and idempotent seeding run in a single controlled startup hook. Eliminates the need for manual migration steps in development.
+- **CORS Middleware** — Origins are configurable via `settings.CORS_ORIGINS`, making it safe to lock down in production without code changes.
+
+---
+
+#### 3. 🗄️ Persistence Layer — PostgreSQL (Port 5432)
+
+PostgreSQL serves as the single source of truth for all employee data.
+
+| Concern | Decision |
+|---|---|
+| **ORM** | SQLAlchemy — type-safe queries, relationship management, connection pooling |
+| **Schema Management** | `Base.metadata.create_all()` at startup (dev); migrate to Alembic for production |
+| **Seeding** | Idempotent seed function — checks row count before inserting; safe to restart |
+| **Connection Pool** | SQLAlchemy's built-in pool; `engine.dispose()` called on graceful shutdown |
+
+---
+
+### Data Flow Diagram
+
+```
+User Action (browser)
+        │
+        │  1. Component triggers hook
+        ▼
+  useEmployees Hook
+        │
+        │  2. fetch() → GET /api/v1/employees
+        ▼
+  FastAPI Router (/api/v1/employees)
+        │
+        │  3. Pydantic validates query params
+        ▼
+  CRUD Repository (crud/employee.py)
+        │
+        │  4. SQLAlchemy ORM query
+        ▼
+  PostgreSQL (employees table)
+        │
+        │  5. Row data returned
+        ▼
+  SQLAlchemy ORM Model → Pydantic Schema
+        │
+        │  6. JSON serialized response
+        ▼
+  useEmployees Hook (state update)
+        │
+        │  7. React re-render
+        ▼
+  UI Component (table / cards)
+```
+
+---
+
+### Cross-Cutting Concerns
+
+| Concern | Implementation |
+|---|---|
+| **Logging** | Structured stdout logging (`%(asctime)s \| %(levelname)s \| %(name)s`) via Python `logging` |
+| **Error Handling** | HTTP exceptions raised in routers; Pydantic validation errors return `422`; DB errors caught in lifespan |
+| **Health Check** | `GET /health` — lightweight liveness probe, returns `{ status: "ok" }` |
+| **API Documentation** | Auto-generated Swagger UI at `/docs`; ReDoc at `/redoc` (FastAPI built-in) |
+| **Environment Config** | `.env` files per service; never committed to version control |
+| **Type Safety** | Pydantic v2 (backend) + TypeScript strict mode (frontend) — end-to-end type safety |
+| **CORS** | Configured in middleware; origins controlled via environment variable |
+
+---
+
+### Scalability & Production Considerations
+
+While this project is structured for local development, the architecture is deliberately designed to scale:
+
+- **Horizontal Scaling** — The API service is stateless (no in-memory session state). Multiple FastAPI instances can sit behind a load balancer with a shared PostgreSQL instance.
+- **Database Migrations** — Replace `create_all()` with **Alembic** for versioned, rollback-capable schema migrations in staging/production.
+- **Containerization** — Each service (`frontend`, `backend`, `postgres`) maps naturally to its own **Docker container**, composable via `docker-compose.yml`.
+- **Async Upgrade Path** — FastAPI natively supports async route handlers. The CRUD layer can be migrated to `asyncpg` / `SQLAlchemy async` for higher I/O throughput under load.
+- **Caching** — A **Redis** cache layer can be introduced in front of the CRUD layer for frequently read, rarely mutated employee records.
+- **CI/CD** — The `tests/` directory provides the foundation for a GitHub Actions pipeline running unit and integration tests on every pull request.
+
+```
+Production Target Architecture (future state):
+
+  [CDN / Vercel]          [Load Balancer]
+       │                       │
+       ▼                       ▼
+  Next.js (SSR)    →    FastAPI Cluster (N instances)
+                               │
+                    ┌──────────┴──────────┐
+                    ▼                     ▼
+              PostgreSQL            Redis Cache
+              (Primary +            (Read-through)
+               Replica)
+```
+
+---
+
+### Design Patterns Applied
+
+| Pattern | Where Used | Purpose |
+|---|---|---|
+| **Repository Pattern** | `backend/app/crud/` | Decouples data access logic from business/route logic |
+| **Dependency Injection** | FastAPI `Depends()` | DB session lifecycle managed per-request |
+| **DTO / Schema Pattern** | `backend/app/schemas/` | Clean separation of API contract from ORM model shape |
+| **Custom Hook Pattern** | `frontend/src/hooks/` | Encapsulates stateful API logic; components stay pure |
+| **Lifespan / Bootstrap Pattern** | `backend/app/main.py` | Controlled startup/shutdown with resource cleanup |
+| **Configuration as Code** | `backend/app/core/config.py` | Typed, validated env config via Pydantic Settings |
