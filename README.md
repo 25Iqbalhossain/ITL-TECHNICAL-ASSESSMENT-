@@ -165,29 +165,6 @@ The presentation layer is a **Next.js 14 App Router** application written in Typ
 
 ---
 
-#### 2. ⚙️ Backend API Service — FastAPI (Port 8000)
-
-The API service is a **Python FastAPI** application structured in clean, separated layers following the **Repository Pattern** and **Dependency Injection** principles.
-
-```
-app/
-├── main.py          ← FastAPI app instance, CORS middleware, lifespan bootstrap
-├── core/
-│   └── config.py    ← Pydantic Settings — environment variables & app config
-├── routers/
-│   └── api.py       ← Route registration, versioned API prefix (/api/v1)
-├── schemas/
-│   └── *.py         ← Pydantic v2 request/response models (validation & serialization)
-├── crud/
-│   └── *.py         ← Repository layer — all DB query logic (no SQL in routes)
-├── models/
-│   └── *.py         ← SQLAlchemy ORM table definitions
-└── database/
-    ├── base.py      ← SQLAlchemy declarative Base
-    ├── session.py   ← Engine & SessionLocal factory (connection pool)
-    └── seed.py      ← Idempotent data seeder (runs once on startup if DB is empty)
-```
-
 **Layered Request Lifecycle:**
 
 ```
